@@ -1,0 +1,72 @@
+---
+tracker:
+  kind: linear
+  api_key: $LINEAR_API_KEY
+  project_slug: "your-linear-project-slug"
+  active_states:
+    - Todo
+    - In Progress
+    - Merging
+    - Rework
+  terminal_states:
+    - Closed
+    - Cancelled
+    - Canceled
+    - Duplicate
+    - Done
+
+polling:
+  interval_ms: 5000
+
+workspace:
+  root: $SYMPHONY_WORKSPACE_ROOT
+
+hooks:
+  after_create: |
+    git clone --depth 1 "$SOURCE_REPO_URL" .
+    if command -v mise >/dev/null 2>&1; then
+      [ -f mise.toml ] || [ -f .tool-versions ] || [ -f .mise.toml ] && mise trust || true
+      [ -f mise.toml ] || [ -f .tool-versions ] || [ -f .mise.toml ] && mise install || true
+    fi
+  before_remove: |
+    true
+
+agent:
+  max_concurrent_agents: 3
+  max_turns: 20
+
+codex:
+  command: codex --config shell_environment_policy.inherit=all --config model_reasoning_effort=high --model gpt-5.4-codex app-server
+  approval_policy: never
+  thread_sandbox: workspace-write
+  turn_sandbox_policy:
+    type: workspaceWrite
+    networkAccess: true
+
+server:
+  port: 4000
+---
+
+You are working on a Linear ticket `{{ issue.identifier }}`.
+
+Issue context:
+- Identifier: {{ issue.identifier }}
+- Title: {{ issue.title }}
+- Current state: {{ issue.state }}
+- Labels: {{ issue.labels }}
+- URL: {{ issue.url }}
+
+Description:
+{% if issue.description %}
+{{ issue.description }}
+{% else %}
+No description provided.
+{% endif %}
+
+Instructions:
+1. Work only inside the provided repository copy.
+2. Reproduce first, then implement, then validate.
+3. Keep changes minimal and reversible.
+4. Keep a single workpad comment if your workflow expects one.
+5. Only stop early for real blockers like missing auth, missing secrets, or missing repository permissions.
+6. Final output should summarize what changed, validation performed, and any blockers.

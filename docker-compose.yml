@@ -1,0 +1,51 @@
+services:
+  symphony:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: symphony
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      LINEAR_API_KEY: ${LINEAR_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GH_TOKEN: ${GH_TOKEN:-${GITHUB_TOKEN:-}}
+      SOURCE_REPO_URL: ${SOURCE_REPO_URL}
+      SYMPHONY_WORKSPACE_ROOT: /data/workspaces
+      SYMPHONY_LOGS_ROOT: /data/logs
+      WORKFLOW_PATH: /config/WORKFLOW.docker.md
+      SYMPHONY_PORT: 4000
+      GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-Codex}
+      GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-codex@users.noreply.github.com}
+      GIT_COMMITTER_NAME: ${GIT_COMMITTER_NAME:-Codex}
+      GIT_COMMITTER_EMAIL: ${GIT_COMMITTER_EMAIL:-codex@users.noreply.github.com}
+      SSH_KNOWN_HOSTS_SOURCE: /secrets/ssh/known_hosts
+      SSH_CONFIG_SOURCE: /secrets/ssh/config
+      SSH_PRIVATE_KEY_SOURCE: /secrets/ssh/id_ed25519
+      GH_CONFIG_SOURCE: /secrets/gh
+      CODEX_CONFIG_SOURCE: /secrets/codex
+
+    ports:
+      - "4000:4001"
+
+    volumes:
+      - ./data/workspaces:/data/workspaces
+      - ./data/logs:/data/logs
+      - ./config/WORKFLOW.docker.md:/config/WORKFLOW.docker.md:ro
+      - ./secrets/ssh:/secrets/ssh:ro
+      - ./secrets/gh:/secrets/gh:ro
+      - ./secrets/codex:/secrets/codex:ro
+    working_dir: /opt/symphony/elixir
+  
+  symphony-proxy:
+    image: alpine/socat
+    container_name: symphony-proxy
+    restart: unless-stopped
+    depends_on:
+      - symphony
+    network_mode: "service:symphony"
+    command:
+      - TCP-LISTEN:4001,fork,reuseaddr,bind=0.0.0.0
+      - TCP:127.0.0.1:4000
