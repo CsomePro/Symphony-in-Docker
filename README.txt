@@ -116,6 +116,21 @@ At startup, the entrypoint copies that directory into `/root/.codex` inside the
 container. This is better than bind-mounting a single file when tools may need
 writable runtime state.
 
+Approach C: directly persist `/root/.codex`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If you want Codex session/history/config state to persist across container
+restarts, you can directly mount a writable local directory:
+
+   # Optionally, you can mount a local .codex config for persistence
+   # - ./volumes/.codex:/root/.codex
+
+This is the simplest approach when the container runs as `root` and you want
+local Codex history/session files to be retained.
+
+On startup, the entrypoint seeds any missing files from the upstream
+`/opt/symphony/.codex` tree into `/root/.codex`, then applies any files from
+`secrets/codex/` on top.
+
 Why copy instead of direct bind mount?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Several CLI tools try to update auth/session files in place. A read-only bind

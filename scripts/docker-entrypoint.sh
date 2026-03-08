@@ -24,6 +24,24 @@ sync_dir_if_exists() {
   fi
 }
 
+overlay_dir_if_exists() {
+  local src="$1" dst="$2"
+  if [ -d "$src" ] && [ "$(find "$src" -mindepth 1 -maxdepth 1 | wc -l)" -gt 0 ]; then
+    mkdir -p "$dst"
+    rsync -a "$src"/ "$dst"/
+    log "overlayed directory $src -> $dst"
+  fi
+}
+
+seed_dir_missing_entries() {
+  local src="$1" dst="$2"
+  if [ -d "$src" ] && [ "$(find "$src" -mindepth 1 -maxdepth 1 | wc -l)" -gt 0 ]; then
+    mkdir -p "$dst"
+    rsync -a --ignore-existing "$src"/ "$dst"/
+    log "seeded missing entries in $dst from $src"
+  fi
+}
+
 : "${SYMPHONY_WORKSPACE_ROOT:=/data/workspaces}"
 : "${SYMPHONY_LOGS_ROOT:=/data/logs}"
 : "${WORKFLOW_PATH:=/config/WORKFLOW.docker.md}"
@@ -33,6 +51,7 @@ sync_dir_if_exists() {
 : "${SSH_PRIVATE_KEY_SOURCE:=/secrets/ssh/id_ed25519}"
 : "${GH_CONFIG_SOURCE:=/secrets/gh}"
 : "${CODEX_CONFIG_SOURCE:=/secrets/codex}"
+: "${CODEX_TEMPLATE_SOURCE:=/opt/symphony/.codex}"
 
 mkdir -p "$SYMPHONY_WORKSPACE_ROOT" "$SYMPHONY_LOGS_ROOT" /root/.ssh /root/.codex /root/.config/gh
 chmod 700 /root/.ssh
@@ -42,7 +61,8 @@ copy_if_exists "$SSH_PRIVATE_KEY_SOURCE" /root/.ssh/id_ed25519 600
 copy_if_exists "$SSH_CONFIG_SOURCE" /root/.ssh/config 600
 copy_if_exists "$SSH_KNOWN_HOSTS_SOURCE" /root/.ssh/known_hosts 644
 sync_dir_if_exists "$GH_CONFIG_SOURCE" /root/.config/gh
-sync_dir_if_exists "$CODEX_CONFIG_SOURCE" /root/.codex
+seed_dir_missing_entries "$CODEX_TEMPLATE_SOURCE" /root/.codex
+overlay_dir_if_exists "$CODEX_CONFIG_SOURCE" /root/.codex
 
 # Populate github.com host key if missing.
 if ! ssh-keygen -F github.com -f /root/.ssh/known_hosts >/dev/null 2>&1; then
