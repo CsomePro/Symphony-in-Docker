@@ -4,4 +4,5 @@ secrets/ssh/config
 data/
 secrets/ssh/id_ed25519
 secrets/ssh/id_ed25519.pub
+secrets/ssh/known_hosts
 secrets/codex/auth.json

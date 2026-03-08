@@ -52,7 +52,11 @@ This package is a fuller containerized setup for running OpenAI Symphony with Co
    - optionally `OPENAI_API_KEY`
    - optionally `GITHUB_TOKEN` or `GH_TOKEN`
 
-4. Put your SSH private key at:
+4. Edit `config/WORKFLOW.docker.md`:
+   - set `tracker.project_slug`
+   - adjust the workflow instructions below the YAML front matter if needed
+
+5. Put your SSH private key at:
 
    ```text
    secrets/ssh/id_ed25519
@@ -65,31 +69,33 @@ This package is a fuller containerized setup for running OpenAI Symphony with Co
    chmod 600 secrets/ssh/config
    ```
 
-5. Seed `known_hosts` from the host:
+6. Seed `known_hosts` from the host:
 
    ```bash
    ssh-keyscan -t rsa,ecdsa,ed25519 github.com > secrets/ssh/known_hosts
    chmod 644 secrets/ssh/known_hosts
    ```
 
-6. Build and start:
+7. Build and start:
 
    ```bash
    docker compose build
    docker compose up -d
    ```
 
-7. Inspect logs:
+8. Inspect logs:
 
    ```bash
    docker compose logs -f symphony
    ```
 
-8. Run diagnostics:
+9. Run the bundled verification script:
 
    ```bash
-   docker compose exec symphony doctor.sh
+   ./verify_symphony_docker.sh
    ```
+
+   This is the recommended first verification pass after `docker compose up -d`.
 
 ## How `.codex` should be set up
 
@@ -189,7 +195,10 @@ This avoids common SSH errors such as:
 - `Bad owner or permissions on /root/.ssh/config`
 - cross-device rename problems while updating `known_hosts`
 
-## How to test SSH, Git, Codex, and `gh` after startup
+## Detailed verification and manual checks
+
+If `./verify_symphony_docker.sh` reports warnings or failures, use the checks in
+this section to inspect specific areas manually.
 
 Enter the container:
 
@@ -356,16 +365,16 @@ From the host:
 docker compose build
 docker compose up -d
 docker compose logs -f symphony
+./verify_symphony_docker.sh
 ```
 
-Then run:
+If you need to debug individual checks, enter the container:
 
 ```bash
-docker compose exec symphony doctor.sh
 docker compose exec symphony bash
 ```
 
-And verify in the container:
+Then verify in the container:
 
 ```bash
 codex login status

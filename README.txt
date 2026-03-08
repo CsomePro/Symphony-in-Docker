@@ -53,7 +53,11 @@ Quick start
    - optionally `OPENAI_API_KEY`
    - optionally `GITHUB_TOKEN` or `GH_TOKEN`
 
-4. Put your SSH private key at:
+4. Edit `config/WORKFLOW.docker.md`:
+   - set `tracker.project_slug`
+   - adjust the workflow instructions below the YAML front matter if needed
+
+5. Put your SSH private key at:
 
    secrets/ssh/id_ed25519
 
@@ -62,23 +66,25 @@ Quick start
    chmod 600 secrets/ssh/id_ed25519
    chmod 600 secrets/ssh/config
 
-5. Seed known_hosts from the host (recommended):
+6. Seed known_hosts from the host (recommended):
 
    ssh-keyscan -t rsa,ecdsa,ed25519 github.com > secrets/ssh/known_hosts
    chmod 644 secrets/ssh/known_hosts
 
-6. Build and start:
+7. Build and start:
 
    docker compose build
    docker compose up -d
 
-7. Inspect logs:
+8. Inspect logs:
 
    docker compose logs -f symphony
 
-8. Run diagnostics:
+9. Run the bundled verification script:
 
-   docker compose exec symphony doctor.sh
+   ./verify_symphony_docker.sh
+
+   This is the recommended first verification pass after `docker compose up -d`.
 
 How `.codex` should be set up
 -----------------------------
@@ -164,8 +170,11 @@ This avoids common SSH errors such as:
 - "Bad owner or permissions on /root/.ssh/config"
 - cross-device rename problems while updating `known_hosts`
 
-How to test SSH, git, Codex, and gh after startup
--------------------------------------------------
+Detailed verification and manual checks
+---------------------------------------
+If `./verify_symphony_docker.sh` reports warnings or failures, use the checks in
+this section to inspect specific areas manually.
+
 Enter the container:
 
    docker compose exec symphony bash
@@ -297,6 +306,9 @@ Open shell:
 Run diagnostic script:
    docker compose exec symphony doctor.sh
 
+Run the bundled verification script:
+   ./verify_symphony_docker.sh
+
 Tail Symphony app log inside mounted volume:
    tail -f data/logs/symphony.log
 
@@ -312,11 +324,10 @@ Security notes
 Recommended first-time validation checklist
 -------------------------------------------
 [ ] `docker compose up -d` succeeds
-[ ] `docker compose exec symphony doctor.sh` shows tools installed
+[ ] `./verify_symphony_docker.sh` completes without failures
 [ ] `codex login status` succeeds
 [ ] `gh auth status` succeeds
 [ ] `ssh -T git@github.com` succeeds
 [ ] `git ls-remote` against your repo succeeds
 [ ] workflow file is mounted correctly
 [ ] Symphony logs show successful startup without YAML or auth errors
-
