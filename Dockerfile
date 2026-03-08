@@ -59,7 +59,8 @@ RUN mkdir -p /data/workspaces /data/logs /config /secrets/ssh /secrets/gh /secre
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY scripts/doctor.sh /usr/local/bin/doctor.sh
 COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/doctor.sh /usr/local/bin/healthcheck.sh
+COPY scripts/tracker_kind_linear.sh /usr/local/bin/tracker_kind_linear.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/doctor.sh /usr/local/bin/healthcheck.sh /usr/local/bin/tracker_kind_linear.sh
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 CMD /usr/local/bin/healthcheck.sh
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]

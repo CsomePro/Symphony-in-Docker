@@ -39,6 +39,7 @@ WARN_COUNT=0
 
 WARN_ITEMS=()
 FAIL_ITEMS=()
+CURRENT_PID=""
 
 pass() {
   printf "%b[PASS]%b %s\n" "$GREEN" "$RESET" "$1"
@@ -65,10 +66,34 @@ have_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+interrupt() {
+  echo
+  warn "verification interrupted"
+  if [[ -n "${CURRENT_PID:-}" ]] && kill -0 "$CURRENT_PID" >/dev/null 2>&1; then
+    kill "$CURRENT_PID" >/dev/null 2>&1 || true
+    wait "$CURRENT_PID" 2>/dev/null || true
+  fi
+  cleanup
+  exit 130
+}
+
+run_and_capture() {
+  local out_file="$1"
+  local err_file="$2"
+  shift 2
+
+  "$@" >"$out_file" 2>"$err_file" &
+  CURRENT_PID=$!
+  wait "$CURRENT_PID"
+  local status=$?
+  CURRENT_PID=""
+  return "$status"
+}
+
 run_host_check() {
   local desc="$1"
   shift
-  if "$@" >/tmp/verify_host.out 2>/tmp/verify_host.err; then
+  if run_and_capture /tmp/verify_host.out /tmp/verify_host.err "$@"; then
     pass "$desc"
     sed 's/^/    /' /tmp/verify_host.out || true
   else
@@ -81,7 +106,8 @@ run_host_check() {
 run_container_check() {
   local desc="$1"
   local cmd="$2"
-  if $COMPOSE_CMD exec -T "$SERVICE_NAME" "$INSIDE_SHELL" -lc "$cmd" >/tmp/verify_ctr.out 2>/tmp/verify_ctr.err; then
+  if run_and_capture /tmp/verify_ctr.out /tmp/verify_ctr.err \
+    $COMPOSE_CMD exec -T "$SERVICE_NAME" "$INSIDE_SHELL" -lc "$cmd"; then
     pass "$desc"
     sed 's/^/    /' /tmp/verify_ctr.out || true
   else
@@ -94,7 +120,8 @@ run_container_check() {
 run_container_warn_check() {
   local desc="$1"
   local cmd="$2"
-  if $COMPOSE_CMD exec -T "$SERVICE_NAME" "$INSIDE_SHELL" -lc "$cmd" >/tmp/verify_ctr.out 2>/tmp/verify_ctr.err; then
+  if run_and_capture /tmp/verify_ctr.out /tmp/verify_ctr.err \
+    $COMPOSE_CMD exec -T "$SERVICE_NAME" "$INSIDE_SHELL" -lc "$cmd"; then
     pass "$desc"
     sed 's/^/    /' /tmp/verify_ctr.out || true
   else
@@ -134,6 +161,7 @@ cleanup() {
   rm -f /tmp/verify_host.out /tmp/verify_host.err /tmp/verify_ctr.out /tmp/verify_ctr.err
 }
 trap cleanup EXIT
+trap interrupt INT TERM
 
 info "Checking host prerequisites"
 if have_cmd docker; then
@@ -159,6 +187,7 @@ for path in \
   scripts/docker-entrypoint.sh \
   scripts/doctor.sh \
   scripts/healthcheck.sh \
+  scripts/tracker_kind_linear.sh \
   config/WORKFLOW.docker.md; do
   if [[ -e "$path" ]]; then
     pass "exists: $path"
@@ -223,6 +252,7 @@ run_container_check "codex is installed" "codex --version"
 run_container_check "gh is installed" "gh --version"
 run_container_check "git is installed" "git --version"
 run_container_check "mise is installed" 'if command -v mise >/dev/null 2>&1; then mise --version; elif [ -x /usr/local/bin/mise ]; then /usr/local/bin/mise --version; elif [ -x /root/.local/bin/mise ]; then /root/.local/bin/mise --version; elif [ -x /home/linuxbrew/.linuxbrew/bin/mise ]; then /home/linuxbrew/.linuxbrew/bin/mise --version; else echo "mise not found in PATH or common install locations" >&2; exit 1; fi'
+run_container_check "Linear tracker check helper is installed" "command -v tracker_kind_linear.sh"
 
 info "Checking configuration inside container"
 run_container_check "workflow file exists in container" "test -f '$WORKFLOW_FILE' && ls -l '$WORKFLOW_FILE'"
@@ -232,6 +262,7 @@ run_container_warn_check "container SSH config is present" "test -f /root/.ssh/c
 run_container_warn_check "container known_hosts is present" "test -f /root/.ssh/known_hosts && ls -l /root/.ssh/known_hosts"
 
 info "Checking application auth inside container"
+run_container_check "Linear tracker configuration and API access" "tracker_kind_linear.sh"
 run_container_warn_check "Codex login status" "codex login status"
 run_container_warn_check "GitHub CLI auth status" "gh auth status"
 
