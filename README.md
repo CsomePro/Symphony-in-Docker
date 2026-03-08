@@ -2,6 +2,12 @@
 
 This package is a fuller containerized setup for running OpenAI Symphony with Codex, Linear, Git, SSH, and GitHub CLI support in one place.
 
+## Upstream reference
+
+The upstream OpenAI Symphony repository is:
+
+- <https://github.com/openai/symphony>
+
 ## What this bundle fixes compared with a minimal draft
 
 1. Installs GitHub CLI (`gh`), which Symphony's `.codex/skills/push` and `.codex/skills/land` treat as a prerequisite.

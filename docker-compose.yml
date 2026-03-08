@@ -1,8 +1,11 @@
 services:
   symphony:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${SYMPHONY_IMAGE:-ghcr.io/csomepro/symphony:full}
+    pull_policy: always
+    # For local image development, replace the image line above with:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: symphony
     restart: unless-stopped
     env_file:
