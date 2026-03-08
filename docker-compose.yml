@@ -37,6 +37,8 @@ services:
       - ./secrets/ssh:/secrets/ssh:ro
       - ./secrets/gh:/secrets/gh:ro
       - ./secrets/codex:/secrets/codex:ro
+      # Optionally, you can mount a local .codex config for persistence
+      # - ./volumes/.codex:/root/.codex
     working_dir: /opt/symphony/elixir
   
   symphony-proxy:
